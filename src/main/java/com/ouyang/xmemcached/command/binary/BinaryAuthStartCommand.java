@@ -1,0 +1,62 @@
+package com.ouyang.xmemcached.command.binary;
+
+import com.ouyang.xmemcached.command.CommandType;
+import com.ouyang.xmemcached.transcoders.CachedData;
+
+import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+
+/**
+ * Auth start command
+ *
+ * @author dennis
+ */
+public class BinaryAuthStartCommand extends BaseBinaryCommand {
+
+    public BinaryAuthStartCommand(String mechanism, byte[] keyBytes,
+                                  CountDownLatch latch, byte[] authData) {
+        super(mechanism, keyBytes, CommandType.AUTH_START, latch, 0, 0,
+                authData, false, null);
+        this.opCode = OpCode.AUTH_START;
+
+    }
+
+    @Override
+    protected void fillExtras(CachedData data) {
+        // must not have extras
+    }
+
+    @Override
+    protected void fillValue(CachedData data) {
+        if (this.value != null)
+            this.ioBuffer.put((byte[]) this.value);
+    }
+
+    @Override
+    protected int getValueLength(CachedData data) {
+        if (this.value == null)
+            return 0;
+        else
+            return ((byte[]) this.value).length;
+    }
+
+    @Override
+    protected byte getExtrasLength() {
+        return (byte) 0;
+    }
+
+    @Override
+    protected boolean readValue(ByteBuffer buffer, int bodyLength,
+                                int keyLength, int extrasLength) {
+        int valueLength = bodyLength - keyLength - extrasLength;
+        if (buffer.remaining() < valueLength) {
+            return false;
+        }
+        byte[] bytes = new byte[valueLength];
+        buffer.get(bytes);
+        setResult(new String(bytes));
+        countDownLatch();
+        return true;
+    }
+
+}
